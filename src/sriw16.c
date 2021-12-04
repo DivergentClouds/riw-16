@@ -165,7 +165,7 @@ int input() {
 	if (_kbhit()) {
 		int c = _getch();
 		if (c == 0 || c == 224) {
-			_getch()
+			_getch();
 			return -1;
 		}
 
