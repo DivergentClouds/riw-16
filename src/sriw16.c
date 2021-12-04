@@ -171,6 +171,7 @@ int input() {
 
 		return c;
 	}
+	return 0;
 }
 
 #elif defined __unix__
