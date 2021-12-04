@@ -113,15 +113,15 @@ The SRIW-16 is a fantasy computer that is interacted with via a simulated telety
 Flags are stored in the least significant nibble of the register that
 `cmpa`/`cmps` is given. The flags are as follows:
 - Carry
-  - ?xxx
+  - x???
   - Set if the comparison had a carry out of bit 15; cleared otherwise
 - Overflow
-  - x?xx
+  - ?x??
   - Set if both operands were of the comparison were the same sign and the
   result is of the opposite sign
 - Negative
-  - xx?x
+  - ??x?
   - Set if result of the comparison was less than 0; cleared otherwise
 - Zero
-  - xxx?
+  - ???x
   - Set if the result of the comparison was 0; cleared otherwise
