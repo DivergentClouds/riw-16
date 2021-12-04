@@ -163,7 +163,7 @@ void quit(int status) {
 
 int input() {
 	if (_kbhit()) {
-		int c = _getch()
+		int c = _getch();
 		if (c == 0 || c == 224) {
 			_getch()
 			return -1;
