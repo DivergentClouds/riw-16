@@ -38,6 +38,7 @@ The SRIW-16 is a fantasy computer that is interacted with via a simulated telety
   number is in
   - `b` is binary,`o` is octal, `d` is decimal, `h` is hexadecimal
   - If a number is not suffixed then it is assumed to be decimal
+- Line comments are started with `;`
 
 
 ### Instructions
