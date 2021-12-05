@@ -7,7 +7,6 @@ Galactic is a fantasy computer that is interacted with via a simulated teletype.
 - Custom CPU called RIW-16
 	- RIW-16 stands for Reduced Instruction Word-16
 - Programmed in custom ASM
-- Little Endian
 - 16-bit registers
 - 16-bit instructions
 - 16-bit words instead of bytes
@@ -85,15 +84,15 @@ Galactic is a fantasy computer that is interacted with via a simulated teletype.
 - `nor $A, $B, $C`
   - `1100 AAAA BBBB CCCC`
   - Performs a bitwise NOR on `$B` and `$C`, and stores the result into `$A`
-- `msb $A, $B, $C`
+- `mso $A, $B, $C`
   - `1101 AAAA BBBB CCCC`
-  - Loads the contents of the most significant byte of the address that
+  - Loads the contents of the most significant octet of the address that
   `($B + $C)` points to into `$A`
-- `lsb $A, $B, $C`
+- `lso $A, $B, $C`
   - `1110 AAAA BBBB CCCC`
-  - Loads the contents of the least significant byte of the address that
+  - Loads the contents of the least significant octet of the address that
   `($B + $C)` points to into `$A`
-- `byte $A, B`
+- `octet $A, B`
   - `1111 AAAA BBBB BBBB`
   - Loads the value `B` into `$A`
 

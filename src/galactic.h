@@ -66,9 +66,9 @@ static struct termios old, raw;
 #define OR     0b1010
 #define XOR    0b1011
 #define NOR    0b1100
-#define MSB    0b1101
-#define LSB    0b1110
-#define BYTE   0b1111
+#define MSO    0b1101
+#define LSO    0b1110
+#define OCTET  0b1111
 
 
 // flag macros
@@ -100,7 +100,6 @@ uint16_t compare(uint16_t cmp_temp, uint16_t r1, uint16_t r2, uint16_t r3);
 void input_wrapper(uint16_t cycle);
 int input();
 void quit();
-int check_endianness();
 
 int load_program(char* filename);
 

@@ -99,13 +99,13 @@ int do_instruction() {
 		case NOR:
 			registers[reg1] = (registers[reg2] | registers[reg3]);
 			break;
-		case MSB:
+		case MSO:
 			registers[reg1] = (memory[registers[reg2] + registers[reg3]]) & 0xff;
 			break;
-		case LSB:
+		case LSO:
 			registers[reg1] = ((memory[registers[reg2] + registers[reg3]]) & 0xff00) >> 8;
 			break;
-		case BYTE:
+		case OCTET:
 			registers[reg1] = instruction & 0xff;
 			break;
 	}
