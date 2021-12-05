@@ -1,5 +1,5 @@
-TARGET_EXEC_UNIX := sriw16
-TARGET_EXEC_WIN := sriw16.exe
+TARGET_EXEC_UNIX := galactic
+TARGET_EXEC_WIN := galactic.exe
 
 CC = gcc
 

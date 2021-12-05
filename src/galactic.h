@@ -1,5 +1,5 @@
-#ifndef SRIW16_H
-#define SRIW16_H
+#ifndef GLACTIC_H
+#define GLACTIC_H
 
 
 // platform specific stuff

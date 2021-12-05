@@ -1,4 +1,4 @@
-#include "sriw16.h"
+#include "galactic.h"
 
 int main(int argc, char** argv) {
 
@@ -26,7 +26,7 @@ int main(int argc, char** argv) {
 	registers[15] = 0; // program counter
 
 	int return_value = 0;
-	uint16_t cycles = 0; // cycle counter
+	uint16_t cycles = 1; // instruction counter, allow time for setup
 
 	while (running) {
 		input_wrapper(cycles);

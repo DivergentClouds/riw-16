@@ -1,12 +1,11 @@
-# SRIW-16
+# Galactic
 
 ## Overview
-The SRIW-16 is a fantasy computer that is interacted with via a simulated teletype.
+Galactic is a fantasy computer that is interacted with via a simulated teletype.
 
 ### Notes
 - Custom CPU called RIW-16
 	- RIW-16 stands for Reduced Instruction Word-16
-- SRIW-16 stands for System Reduced Instruction Word-16
 - Programmed in custom ASM
 - Little Endian
 - 16-bit registers
