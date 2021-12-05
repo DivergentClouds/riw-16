@@ -4,7 +4,7 @@ int main(int argc, char** argv) {
 
 
 	if (argc < 2 || argc > 3){
-		fprintf(stderr, "Error: Wrong number of arguments, call SRIW-16 with the following arguments:\n");
+		fprintf(stderr, "Error: Wrong number of arguments, call Galactic with the following arguments:\n");
 		fprintf(stderr, "%s <memory image> [storage image]\n", argv[0]);
 		return 3;
 	}
@@ -27,14 +27,22 @@ int main(int argc, char** argv) {
 
 	int return_value = 0;
 	uint16_t cycles = 1; // instruction counter, allow time for setup
+	uint16_t input_pointer = 0; // passed by reference
 
 	while (running) {
-		input_wrapper(cycles);
-		
+		input_wrapper(&input_pointer);
+//		printf("%d",input_pointer);
+
 		return_value = do_instruction();
 		if (return_value) running = 0;
 
+		if (!cycles && input_pointer != 0) {
+			memory[MMIO_INPUT] = input_pointer;
+			input_pointer = 0;
+		}
+		
 		cycles = (cycles + 1) % CYCLE_LOOP;
+		fflush(stdout);
 	}
 
 	if (return_value == 255) return_value = 0;
@@ -62,8 +70,9 @@ int do_instruction() {
 		case STORE:
 			memory[registers[reg1] + registers[reg2]] = registers[reg3];
 			if (registers[reg1] + registers[reg2] == MMIO_OUTPUT) // no escape codes
-				if (memory[registers[reg3]] != 27 && memory[registers[reg3]] < 256)
-					putchar(registers[reg3]);
+				if (registers[reg3] != 27 && registers[reg3] < 128) { // ascii only
+					printchar(registers[reg3]);
+				}
 			break;
 		case ADD:
 			registers[reg1] = registers[reg2] + registers[reg3];
@@ -143,18 +152,18 @@ uint16_t compare(uint16_t cmp_temp, uint16_t r1, uint16_t r2, uint16_t r3) {
 	return flags_temp;
 }
 
-void input_wrapper(uint16_t cycle) {
+void input_wrapper(uint16_t* result) {
 	int c = input();
-	if (c != -1 && c != 0 && !cycle) {
-		memory[MMIO_INPUT] = c;
+	if (c != -1 && c != 0) {
+		*result = c;
 	}
 }
 
 void quit(int status) {
 
-#ifdef __unix__ // only do tty stuff for unix-based systems
+	#ifdef __unix__ // only do tty stuff for unix-based systems
 	reset_tty();
-#endif
+	#endif
 
 	exit(status);
 }
@@ -168,25 +177,50 @@ int input() {
 			_getch();
 			return -1;
 		}
-
+		printchar(c); // echo input
 		return c;
 	}
 	return 0;
 }
 
+void printchar(int c) {
+	putchar(c);
+	if(c == '\r') putchar('\n');
+}
+
 #elif defined __unix__
 
 int input() {
-	char c = '\0';
+	int c = '\0';
 	int poll_res = poll(&fd, 1, INPUT_TIMEOUT);
 
 	if (poll_res == -1) return -1;
 	if (!poll_res) return 0;
-	if (fd.revents & POLLIN) read(STDIN_FILENO, &c, 1);
+	if (fd.revents & POLLIN)
+//		read(STDIN_FILENO, &c, 0);
+		c = getchar();
+
+//	putchar('a');
+//	} else {
+//		c = 0;
+//	}
+
+	if (c > 128 || c < 0) // ascii only
+		c = 0;
+
 	return c;
 }
 
+void printchar(int c) {
+	putchar(c);
+}
+
 void init_tty() {
+	if (!isatty (STDIN_FILENO)) {
+		fprintf (stderr, "Error: Galactic requires that stdin be a terminal\n");
+		exit (EXIT_FAILURE);
+	}
+	
 	tcgetattr(STDIN_FILENO, &old); /* grab old terminal i/o settings */
 	raw = old; /* make new settings same as old settings */
 	raw.c_lflag &= ~ICANON; /* disable buffered i/o */

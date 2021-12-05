@@ -17,7 +17,7 @@
 #include <sys/poll.h>
 #include <sys/time.h>
 
-#define INPUT_TIMEOUT 5
+#define INPUT_TIMEOUT 0
 
 void init_tty();
 void init_signals();
@@ -81,7 +81,7 @@ static struct termios old, raw;
 
 // misc macros
 
-#define CYCLE_LOOP    256
+#define CYCLE_LOOP    32
 
 // arrays
 
@@ -97,9 +97,10 @@ uint8_t running;
 
 int do_instruction();
 uint16_t compare(uint16_t cmp_temp, uint16_t r1, uint16_t r2, uint16_t r3);
-void input_wrapper(uint16_t cycle);
+void input_wrapper(uint16_t* result);
 int input();
 void quit();
+void printchar(int c);
 
 int load_program(char* filename);
 
