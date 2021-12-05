@@ -25,7 +25,7 @@ The SRIW-16 is a fantasy computer that is interacted with via a simulated telety
     - Address -5 is the LSW of storage-address
   - Program is loaded in at address 0
     - Program Counter starts at 0
-- 2^20 words of addressable storage
+- 2^20 words of addressable storage (not implimented)
 - Text based I/O
 - Non-moveable cursor
 
@@ -34,8 +34,8 @@ The SRIW-16 is a fantasy computer that is interacted with via a simulated telety
 ### Notes
 - $ specifies a register
 - The lack of a prefix specifies a immediate
-- Immediates may be suffixed with either `b` `o` `d` or `h` to specifiy what base the
-  number is in
+- Immediates may be suffixed with either `b` `o` `d` or `h` to specifiy what
+  base the number is in
   - `b` is binary,`o` is octal, `d` is decimal, `h` is hexadecimal
   - If a number is not suffixed then it is assumed to be decimal
 - Line comments are started with `;`
