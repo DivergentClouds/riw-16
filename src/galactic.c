@@ -193,7 +193,7 @@ int input() {
 void printchar(int c) {
 	putchar(c);
 	if (c == '\r') putchar('\n'); // feature parity with linux
-	if (c == 127) putchar(8); // feature parity with linux
+	if (c == 127) putchar('\b'); // feature parity with linux
 }
 
 #elif defined __unix__
@@ -215,7 +215,7 @@ int input() {
 
 void printchar(int c) {
 	putchar(c);
-	if (c == 127) putchar(8); // make backspace work
+	if (c == 127) putchar('\b'); // make backspace work
 }
 
 void init_tty() {
