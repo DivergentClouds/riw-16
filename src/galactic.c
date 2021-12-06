@@ -11,6 +11,12 @@ int main(int argc, char** argv) {
 
 	int load_status = load_program(argv[1]);
 
+	if (argc == 3) {
+		char* storage_name = argv[2];
+	} else {
+		char* storage_name = "";
+	}
+
 	if (load_status) {
 		return load_status;
 	}
@@ -28,10 +34,10 @@ int main(int argc, char** argv) {
 	int return_value = 0;
 	uint16_t cycles = 1; // instruction counter, allow time for setup
 	uint16_t input_pointer = 0; // passed by reference
+	uint16_t is_storage_open = 0;
 
 	while (running) {
 		input_wrapper(&input_pointer);
-//		printf("%d",input_pointer);
 
 		return_value = do_instruction();
 		if (return_value) running = 0;
@@ -41,7 +47,8 @@ int main(int argc, char** argv) {
 			input_pointer = 0;
 		}
 		
-		cycles = (cycles + 1) % CYCLE_LOOP;
+		if (is_storage_open) is_storage_open = (is_storage_open + 1) % STORAGE_LOOP;
+		cycles = (cycles + 1) % INPUT_LOOP;
 		fflush(stdout);
 	}
 
@@ -185,7 +192,8 @@ int input() {
 
 void printchar(int c) {
 	putchar(c);
-	if(c == '\r') putchar('\n');
+	if (c == '\r') putchar('\n'); // feature parity with linux
+	if (c == 127) putchar(8); // feature parity with linux
 }
 
 #elif defined __unix__
@@ -197,13 +205,7 @@ int input() {
 	if (poll_res == -1) return -1;
 	if (!poll_res) return 0;
 	if (fd.revents & POLLIN)
-//		read(STDIN_FILENO, &c, 0);
 		c = getchar();
-
-//	putchar('a');
-//	} else {
-//		c = 0;
-//	}
 
 	if (c > 128 || c < 0) // ascii only
 		c = 0;
@@ -213,6 +215,7 @@ int input() {
 
 void printchar(int c) {
 	putchar(c);
+	if (c == 127) putchar(8); // make backspace work
 }
 
 void init_tty() {
@@ -269,7 +272,7 @@ void quit_sig() {
 
 #endif
 
-int load_program(char *filename) {
+int load_program(char* filename) {
 	uint32_t filelen;
 
 	FILE *file = fopen(filename, "rb");
@@ -293,4 +296,12 @@ int load_program(char *filename) {
 	fclose(file);
 
 	return 0;
+}
+
+void write_storage(uint16_t data) {
+
+}
+
+void read_storage(uint16_t* data) {
+
 }

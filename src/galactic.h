@@ -81,7 +81,10 @@ static struct termios old, raw;
 
 // misc macros
 
-#define CYCLE_LOOP    32
+#define INPUT_LOOP    32
+#define STORAGE_LOOP  256
+#define STORAGE_SPACE 0x100000
+
 
 // arrays
 
@@ -92,6 +95,9 @@ uint16_t registers[16];
 // variables
 
 uint8_t running;
+FILE* storage;
+char* storage_name; // argv[2] if it exists, otherwise empty string
+uint16_t is_storage_open; // 0 if file is closed, counts up if open, modulo INPUT_LOOP
 
 // functions
 
@@ -103,5 +109,6 @@ void quit();
 void printchar(int c);
 
 int load_program(char* filename);
-
+void write_storage(uint16_t data);
+void read_storage(uint16_t* data);
 #endif
