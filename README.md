@@ -36,7 +36,7 @@ Galactic is a fantasy computer that is interacted with via a simulated teletype.
 - Immediates may be prefixed with either `b` `o` `d` or `h` to specifiy what
   base the number is in
   - `b` is binary,`o` is octal, `d` is decimal, `h` is hexadecimal
-  - If a number is not suffixed then it is assumed to be decimal
+  - If a number is not prefixed then it is assumed to be decimal
 - Line comments are started with `;`
 
 
