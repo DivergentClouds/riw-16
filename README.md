@@ -44,7 +44,7 @@ Galactic is a fantasy computer that is interacted with via a simulated teletype.
 ### Instructions
 
 - `loct $A, B`
-  - `1111 AAAA BBBB BBBB`
+  - `0000 AAAA BBBB BBBB`
   - Loads the value `B` into the lower octet of`$A`, other bits in `$A` are
   not afected
 - `load $A, $B, $C`
