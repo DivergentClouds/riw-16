@@ -14,13 +14,14 @@ Galactic is a fantasy computer that is interacted with via a simulated teletype.
 - Mixed Program/Data
 - 16 Registers
 - 2^16 words of memory
-  - Top 5 Words are used for memory-mapped I/O
+  - Top 6 Words are used for memory-mapped I/O
     - Address -1 is char-out
     - Address -2 is char-in
     - Address -3 is storage-io
       - Read from address for input, write for output
     - Address -4 is the MSW of storage-address
     - Address -5 is the LSW of storage-address
+    - Address -6 halts the machine when accessed
   - Program is loaded in at address 0
     - Program Counter starts at 0
 - 2^20 words of addressable storage (not implimented)
@@ -32,7 +33,7 @@ Galactic is a fantasy computer that is interacted with via a simulated teletype.
 ### Notes
 - $ specifies a register
 - The lack of a prefix specifies a immediate
-- Immediates may be suffixed with either `b` `o` `d` or `h` to specifiy what
+- Immediates may be prefixed with either `b` `o` `d` or `h` to specifiy what
   base the number is in
   - `b` is binary,`o` is octal, `d` is decimal, `h` is hexadecimal
   - If a number is not suffixed then it is assumed to be decimal
@@ -41,9 +42,10 @@ Galactic is a fantasy computer that is interacted with via a simulated teletype.
 
 ### Instructions
 
-- `halt`
-  - `0000 ???? ???? ????`
-  - Stops the computer, `?` may be anything
+- `loct $A, B`
+  - `1111 AAAA BBBB BBBB`
+  - Loads the value `B` into the lower octet of`$A`, other bits in `$A` are
+  not afected
 - `load $A, $B, $C`
   - `0001 AAAA BBBB CCCC`
   - Loads the contents of the address that `($B + $C)` points to into `$A`
@@ -92,9 +94,10 @@ Galactic is a fantasy computer that is interacted with via a simulated teletype.
   - `1110 AAAA BBBB CCCC`
   - Loads the contents of the least significant octet of the address that
   `($B + $C)` points to into `$A`
-- `octet $A, B`
+- `uoct $A, B`
   - `1111 AAAA BBBB BBBB`
-  - Loads the value `B` into `$A`
+  - Loads the value `B` into the upper octet of`$A`, other bits in `$A` are
+  not afected
 
 ### Registers
 
