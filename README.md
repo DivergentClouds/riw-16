@@ -37,7 +37,8 @@ Galactic is a fantasy computer that is interacted with via a simulated teletype.
   base the number is in
   - `b` is binary,`o` is octal, `d` is decimal, `h` is hexadecimal
   - If a number is not prefixed then it is assumed to be decimal
-- Line comments are started with `;`
+- Line comments are started with `;
+- The emulator currently does not support `loct` and `uoct`
 
 
 ### Instructions
