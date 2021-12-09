@@ -21,7 +21,8 @@ Galactic is a fantasy computer that is interacted with via a simulated teletype.
       - Read from address for input, write for output
     - Address -4 is the MSW of storage-address
     - Address -5 is the LSW of storage-address
-    - Address -6 halts the machine when accessed
+    - Address -6 halts the machine when accessed (including by jumping to it)
+    (needs to be added to emulator)
   - Program is loaded in at address 0
     - Program Counter starts at 0
 - 2^20 words of addressable storage (not implimented)
