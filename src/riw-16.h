@@ -1,5 +1,5 @@
-#ifndef GLACTIC_H
-#define GLACTIC_H
+#ifndef RIW16_H
+#define RIW16_H
 
 
 // platform specific stuff
@@ -16,6 +16,7 @@
 #include <fcntl.h>
 #include <sys/poll.h>
 #include <sys/time.h>
+#include <time.h>
 
 #define INPUT_TIMEOUT 0
 
@@ -42,18 +43,22 @@ static struct termios old, raw;
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 
 // memory macros
 
 #define AVAILABLE_RAM 0x10000
-#define MMIO_SIZE     0x2
-#define MMIO_OUTPUT   AVAILABLE_RAM - 0x1
-#define MMIO_INPUT    AVAILABLE_RAM - 0x2
-
+#define MMIO_SIZE     0x6
+#define MMIO_CHAROUT  AVAILABLE_RAM - 0x1
+#define MMIO_CHARIN   AVAILABLE_RAM - 0x2
+#define MMIO_STOREIO  AVAILABLE_RAM - 0x3
+#define MMIO_STOREMSW AVAILABLE_RAM - 0x4
+#define MMIO_STORELSW AVAILABLE_RAM - 0x5
+#define MMIO_HALT     AVAILABLE_RAM - 0x6
 
 // instruction macros
 
-#define HALT   0b0000
+#define LOCT   0b0000
 #define LOAD   0b0001
 #define STORE  0b0010
 #define ADD    0b0011
@@ -68,7 +73,7 @@ static struct termios old, raw;
 #define NOR    0b1100
 #define MSO    0b1101
 #define LSO    0b1110
-#define OCTET  0b1111
+#define UOCT   0b1111
 
 
 // flag macros
@@ -83,7 +88,7 @@ static struct termios old, raw;
 
 #define INPUT_LOOP    32
 #define STORAGE_LOOP  256
-#define STORAGE_SPACE 0x100000
+#define STORAGE_SPACE 0x400000
 
 
 // arrays
@@ -103,6 +108,7 @@ uint16_t is_storage_open; // 0 if file is closed, counts up if open, modulo INPU
 
 int do_instruction();
 uint16_t compare(uint16_t cmp_temp, uint16_t r1, uint16_t r2, uint16_t r3);
+int check_halt(uint16_t address);
 void input_wrapper(uint16_t* result);
 int input();
 void quit();
@@ -111,4 +117,7 @@ void printchar(int c);
 int load_program(char* filename);
 void write_storage(uint16_t data);
 void read_storage(uint16_t* data);
+int open_storage();
+
+void millisleep(unsigned int ms);
 #endif

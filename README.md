@@ -1,11 +1,10 @@
-# Galactic
+# RIW-16
 
 ## Overview
-Galactic is a fantasy computer that is interacted with via a simulated teletype.
+RIW-16 is a fantasy computer that is interacted with via a simulated teletype.
 
 ### Notes
-- Custom CPU called RIW-16
-	- RIW-16 stands for Reduced Instruction Word-16
+- RIW-16 stands for Reduced Instruction Word-16
 - Programmed in custom ASM
 - 16-bit registers
 - 16-bit instructions
@@ -22,10 +21,9 @@ Galactic is a fantasy computer that is interacted with via a simulated teletype.
     - Address -4 is the MSW of storage-address
     - Address -5 is the LSW of storage-address
     - Address -6 halts the machine when accessed by memory-based instructions
-    (needs to be added to emulator)
   - Program is loaded in at address 0
     - Program Counter starts at 0
-- 2^20 words of addressable storage (not implimented)
+- 2^22 words of addressable storage (not implimented)
 - Text based I/O
 - Non-moveable cursor
 
@@ -38,8 +36,7 @@ Galactic is a fantasy computer that is interacted with via a simulated teletype.
   base the number is in
   - `b` is binary,`o` is octal, `d` is decimal, `h` is hexadecimal
   - If a number is not prefixed then it is assumed to be decimal
-- Line comments are started with `;
-- The emulator currently does not support `loct` and `uoct`
+- Line comments are started with `;`
 
 
 ### Instructions
