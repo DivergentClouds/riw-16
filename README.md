@@ -148,13 +148,13 @@ RIW-16 is a fantasy computer that is programmed in an assembly language with
 Flags are stored in the least significant nibble of the register that
 `cmp` is given. Other bits in the register are unaffected.
 The flags are as follows:
-- Carry
+- Half
   - x???
-  - Set if the comparison had a carry out of bit 15; cleared otherwise
+  - Set if the result of the comparison was less than 256; cleared otherwise
 - Overflow
   - ?x??
   - Set if both operands were of the comparison were the same sign and the
-  result is of the opposite sign
+  result is of the opposite sign; cleared otherwise
 - Negative
   - ??x?
   - Set if result of the comparison was less than 0; cleared otherwise
