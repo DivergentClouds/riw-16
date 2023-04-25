@@ -81,56 +81,55 @@ RIW-16 is a fantasy computer that is programmed in an assembly language with
 - `uoct $A, B`
   - `0001 AAAA BBBB BBBB`
   - Loads the immediate value `B` into the upper octet of`$A`, other bits in
+- `adn $A, $B, C`
+  - `0010 AAAA BBBB CCCC`
+  - Adds `C` to `$B` and store the result in `$A`. `C` is treated as a 4-bit
+  signed integer
   `$A` are not affected
 - `load $A, $B, $C`
-  - `0010 AAAA BBBB CCCC`
+  - `0011 AAAA BBBB CCCC`
   - Loads the contents of the address that `($B + $C)` points to into `$A`.
   `$C` is treated as signed
 - `store $A, $B, $C`
-  - `0011 AAAA BBBB CCCC`
+  - `0100 AAAA BBBB CCCC`
   - Stores `$C` into the address that `($A + $B)` points to. `$B` is treated
   as signed
 - `add $A, $B, $C`
-  - `0100 AAAA BBBB CCCC`
+  - `0101 AAAA BBBB CCCC`
   - Adds `$B` to `$C` and stores the result in `$A`
 - `sub $A, $B, $C`
-  - `0101 AAAA BBBB CCCC`
+  - `0110 AAAA BBBB CCCC`
   - Subtracts `$C` from `$B` and stores the result in `$A`
 - `cmp $A, $B, $C`
-  - `0110 AAAA BBBB CCCC`
+  - `0111 AAAA BBBB CCCC`
   - Compare `$B` and `$C` with a subtraction of the form `$B - $C`,
   store/clear flags of the comparison in `$A`, other bits in `$A` are not
   affected
 - `branch $A, $B, C`
-  - `0111 AAAA BBBB CCCC`
+  - `1000 AAAA BBBB CCCC`
   - If the results of a bitwise AND with the immediate value `C` and `$B` match
   `C`, copy `$A` into `$pc`
 - `shift $A, $B, $C`
-  - `1000 AAAA BBBB CCCC`
+  - `1001 AAAA BBBB CCCC`
   - Bitshifts `$B` by `$C` (negative for left, positive for right) and stores
   the result in `$A`. Newly shifted in bits are 0
 - `and $A, $B, $C`
-  - `1001 AAAA BBBB CCCC`
+  - `1010 AAAA BBBB CCCC`
   - Performs a bitwise AND on `$B` and `$C`, and stores the result into `$A`
 - `or $A, $B, $C`
-  - `1010 AAAA BBBB CCCC`
+  - `1011 AAAA BBBB CCCC`
   - Performs a bitwise OR on `$B` and `$C`, and stores the result into `$A`
 - `xor $A, $B, $C`
-  - `1011 AAAA BBBB CCCC`
+  - `1100 AAAA BBBB CCCC`
   - Performs a bitwise XOR on `$B` and `$C`, and stores the result into `$A`
 - `nor $A, $B, $C`
-  - `1100 AAAA BBBB CCCC`
+  - `1101 AAAA BBBB CCCC`
   - Performs a bitwise NOR on `$B` and `$C`, and stores the result into `$A`
 - `swap $A, $B, $C`
-  - `1101 AAAA BBBB CCCC`
+  - `1110 AAAA BBBB CCCC`
   - Sets the most significant octet of `$A` to the least significant octet of
   `$B` and the least significant octet of `$A` to the most significant octet
   of `$C` 
-- `lso $A, $B, $C`
-  - `1110 AAAA BBBB CCCC`
-  - Loads the contents of the least significant octet of the address that
-  `($B + $C)` points to into `$A`, other bits in `$A` are not affected. `$C` is
-  treated as signed 
 - `io $A, $B, $C`
   - `1111 AAAA BBBB CCCC`
   - Performs a device-specific I/O operation `$B` using device `$A` and
