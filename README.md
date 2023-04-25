@@ -119,10 +119,11 @@ RIW-16 is a fantasy computer that is programmed in an assembly language with
 - `nor $A, $B, $C`
   - `1100 AAAA BBBB CCCC`
   - Performs a bitwise NOR on `$B` and `$C`, and stores the result into `$A`
-- `mso $A, $B, $C`
+- `swap $A, $B, $C`
   - `1101 AAAA BBBB CCCC`
-  - Loads the contents of the most significant octet of the address that
-  `($B + $C)` points to into `$A`, other bits in `$A` are not affected 
+  - Sets the most significant octet of `$A` to the least significant octet of
+  `$B` and the least significant octet of `$A` to the most significant octet
+  of `$C` 
 - `lso $A, $B, $C`
   - `1110 AAAA BBBB CCCC`
   - Loads the contents of the least significant octet of the address that
