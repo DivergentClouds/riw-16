@@ -84,10 +84,12 @@ RIW-16 is a fantasy computer that is programmed in an assembly language with
   `$A` are not affected
 - `load $A, $B, $C`
   - `0010 AAAA BBBB CCCC`
-  - Loads the contents of the address that `($B + $C)` points to into `$A`
+  - Loads the contents of the address that `($B + $C)` points to into `$A`.
+  `$C` is treated as signed
 - `store $A, $B, $C`
   - `0011 AAAA BBBB CCCC`
-  - Stores `$C` into the address that `($A + $B)` points to
+  - Stores `$C` into the address that `($A + $B)` points to. `$B` is treated
+  as signed
 - `add $A, $B, $C`
   - `0100 AAAA BBBB CCCC`
   - Adds `$B` to `$C` and stores the result in `$A`
@@ -127,7 +129,8 @@ RIW-16 is a fantasy computer that is programmed in an assembly language with
 - `lso $A, $B, $C`
   - `1110 AAAA BBBB CCCC`
   - Loads the contents of the least significant octet of the address that
-  `($B + $C)` points to into `$A`, other bits in `$A` are not affected 
+  `($B + $C)` points to into `$A`, other bits in `$A` are not affected. `$C` is
+  treated as signed 
 - `io $A, $B, $C`
   - `1111 AAAA BBBB CCCC`
   - Performs a device-specific I/O operation `$B` using device `$A` and
