@@ -1,7 +1,8 @@
 # RIW-16
 
 ## Overview
-RIW-16 is a fantasy computer that is interacted with via a simulated teletype.
+RIW-16 is a fantasy computer that is programmed in an assembly language with
+16 instructions.
 
 ### Notes
 - RIW-16 stands for Reduced Instruction Word-16
@@ -13,28 +14,60 @@ RIW-16 is a fantasy computer that is interacted with via a simulated teletype.
 - Mixed Program/Data
 - 16 Registers
 - 2^16 words of memory
-  - Top 6 Words are used for memory-mapped I/O
-    - Address -1 is char-out
-    - Address -2 is char-in
-    - Address -3 is storage-io
-      - Read from address for input, write for output
-    - Address -4 is the MSW of storage-address
-    - Address -5 is the LSW of storage-address
-    - Address -6 halts the machine when accessed by memory-based instructions
   - Program is loaded in at address 0
     - Program Counter starts at 0
-- 2^22 words of addressable storage (not implimented)
+- 2^32 words of addressable storage
+  - Custom storage data format to allow for sparse data
 - Text based I/O
 - Non-moveable cursor
+
+## I/O
+
+### Devices
+- System
+  - ID: `0x0`
+  - Operations:
+    - Halt `0x0`
+- Console
+  - ID: `0x1`
+  - Operations:
+    - Char-out `0x0`
+      - Data: The lower octet is sent to stdout of the host.
+    - Char-in `0x1`
+      - Data: If there is a byte from stdin on the host available then the
+      upper octet is set to 0 and lower octet is set to the next byte of stdin
+      otherwise the whole word is set to `0xffff`.
+- Storage
+  - ID: `0x2`
+  - Operations:
+    - MSW-Out `0x0`
+      - Data: Writes the most significant word of the storage device's internal
+      address.
+    - LSW-Out `0x1`
+      - Data: Writes the least significant word of the storage device's internal
+      address.
+    - MSW-In `0x2`
+      - Data: Reads the most significant word of the storage device's internal
+      address.
+    - LSW-In `0x3`
+      - Data: Reads the least significant word of the storage device's internal
+      address.
+    - Storage-Out `0x4`
+      - Data: Writes to the word at the storage device's current internal
+      address.
+    - Storage-In `0x5`
+      - Data: Reads the word at the storage device's current internal
+      address.
+
 
 ## Assembly Language
 
 ### Notes
 - $ specifies a register
 - The lack of a prefix specifies a immediate
-- Immediates may be prefixed with either `b` `o` `d` or `h` to specifiy what
+- Immediates may be prefixed with either `0b` `0o` or `0x` to specifiy what
   base the number is in
-  - `b` is binary,`o` is octal, `d` is decimal, `h` is hexadecimal
+  - `0b` is binary,`0o` is octal, `0x` is hexadecimal
   - If a number is not prefixed then it is assumed to be decimal
 - Line comments are started with `;`
 
@@ -43,36 +76,37 @@ RIW-16 is a fantasy computer that is interacted with via a simulated teletype.
 
 - `loct $A, B`
   - `0000 AAAA BBBB BBBB`
-  - Loads the value `B` into the lower octet of`$A`, other bits in `$A` are
-  not afected
+  - Loads the immediate value `B` into the lower octet of`$A`, other bits in
+  `$A` are not affected
+- `uoct $A, B`
+  - `0001 AAAA BBBB BBBB`
+  - Loads the immediate value `B` into the upper octet of`$A`, other bits in
+  `$A` are not affected
 - `load $A, $B, $C`
-  - `0001 AAAA BBBB CCCC`
+  - `0010 AAAA BBBB CCCC`
   - Loads the contents of the address that `($B + $C)` points to into `$A`
 - `store $A, $B, $C`
-  - `0010 AAAA BBBB CCCC`
+  - `0011 AAAA BBBB CCCC`
   - Stores `$C` into the address that `($A + $B)` points to
 - `add $A, $B, $C`
-  - `0011 AAAA BBBB CCCC`
+  - `0100 AAAA BBBB CCCC`
   - Adds `$B` to `$C` and stores the result in `$A`
 - `sub $A, $B, $C`
-  - `0100 AAAA BBBB CCCC`
-  - Subtracts `$C` from `$B` and stores the result in `$A`
-- `cmpa $A, $B, $C`
   - `0101 AAAA BBBB CCCC`
-  - Compare `$B` and `$C` with an add, store/clear the flags of the
-  comparison in `$A`, other bits in `$A` are not affected
-- `cmps $A, $B, $C`
+  - Subtracts `$C` from `$B` and stores the result in `$A`
+- `cmp $A, $B, $C`
   - `0110 AAAA BBBB CCCC`
-  - Compare `$B` and `$C` with a subtraction, store/clear flags of the
-  comparison in `$A`, other bits in `$A` are not affected
+  - Compare `$B` and `$C` with a subtraction of the form `$B - $C`,
+  store/clear flags of the comparison in `$A`, other bits in `$A` are not
+  affected
 - `branch $A, $B, C`
   - `0111 AAAA BBBB CCCC`
-  - If the results of a bitwise AND with `#C` and `$B` match `#C`, copy `$A`
-  into `$pc`
+  - If the results of a bitwise AND with the immediate value `C` and `$B` match
+  `C`, copy `$A` into `$pc`
 - `shift $A, $B, $C`
   - `1000 AAAA BBBB CCCC`
   - Bitshifts `$B` by `$C` (negative for left, positive for right) and stores
-  the result in `$A`
+  the result in `$A`. Newly shifted in bits are 0
 - `and $A, $B, $C`
   - `1001 AAAA BBBB CCCC`
   - Performs a bitwise AND on `$B` and `$C`, and stores the result into `$A`
@@ -88,15 +122,15 @@ RIW-16 is a fantasy computer that is interacted with via a simulated teletype.
 - `mso $A, $B, $C`
   - `1101 AAAA BBBB CCCC`
   - Loads the contents of the most significant octet of the address that
-  `($B + $C)` points to into `$A`
+  `($B + $C)` points to into `$A`, other bits in `$A` are not affected 
 - `lso $A, $B, $C`
   - `1110 AAAA BBBB CCCC`
   - Loads the contents of the least significant octet of the address that
-  `($B + $C)` points to into `$A`
-- `uoct $A, B`
-  - `1111 AAAA BBBB BBBB`
-  - Loads the value `B` into the upper octet of`$A`, other bits in `$A` are
-  not afected
+  `($B + $C)` points to into `$A`, other bits in `$A` are not affected 
+- `io $A, $B, $C`
+  - `1111 AAAA BBBB CCCC`
+  - Performs a device-specific I/O operation `$B` using device `$A` and
+  and `$C` as the data.
 
 ### Registers
 
@@ -112,7 +146,8 @@ RIW-16 is a fantasy computer that is interacted with via a simulated teletype.
 ### Flags
 
 Flags are stored in the least significant nibble of the register that
-`cmpa`/`cmps` is given. The flags are as follows:
+`cmp` is given. Other bits in the register are unaffected.
+The flags are as follows:
 - Carry
   - x???
   - Set if the comparison had a carry out of bit 15; cleared otherwise
