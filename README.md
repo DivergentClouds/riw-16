@@ -158,7 +158,8 @@ The flags are as follows:
   result is of the opposite sign; cleared otherwise
 - Negative
   - ??x?
-  - Set if result of the comparison was less than 0; cleared otherwise
+  - Set if result of the comparison had the most significant bit set;
+  cleared otherwise
 - Zero
   - ???x
   - Set if the result of the comparison was 0; cleared otherwise
