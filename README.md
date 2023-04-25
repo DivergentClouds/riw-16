@@ -81,11 +81,11 @@ RIW-16 is a fantasy computer that is programmed in an assembly language with
 - `uoct $A, B`
   - `0001 AAAA BBBB BBBB`
   - Loads the immediate value `B` into the upper octet of`$A`, other bits in
+  `$A` are not affected
 - `adn $A, $B, C`
   - `0010 AAAA BBBB CCCC`
   - Adds `C` to `$B` and store the result in `$A`. `C` is treated as a 4-bit
   signed integer
-  `$A` are not affected
 - `load $A, $B, $C`
   - `0011 AAAA BBBB CCCC`
   - Loads the contents of the address that `($B + $C)` points to into `$A`.
