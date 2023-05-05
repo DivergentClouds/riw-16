@@ -19,7 +19,7 @@ RIW-16 is a fantasy computer that is programmed in an assembly language with
 - 2^32 words of addressable storage
   - Custom storage data format to allow for sparse data
 - Text based I/O
-- Non-moveable cursor
+- Words are big-endian
 
 ## I/O
 
