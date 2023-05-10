@@ -18,6 +18,8 @@ RIW-16 is a fantasy computer that is programmed in an assembly language with
     - Program Counter starts at 0
   - Only 2^16 words are addressable at a single time
 - Paged memory
+  - 256 pages
+  - Each Page is 256 Words
 - 2^32 words of addressable storage
   - The emulator will use a custom storage data format to allow for sparse data
 - Text based I/O
@@ -57,7 +59,7 @@ RIW-16 is a fantasy computer that is programmed in an assembly language with
     - Char-in `0x1`
       - Data: If there is a byte from stdin on the host available, then the
       upper octet is set to 0 and lower octet is set to the next byte of stdin,
-      otherwise the whole word is set to `0xffff`.
+      otherwise the whole word is set to `0xFFFF`.
 - Storage
   - ID: `0x2`
   - Operations:
@@ -99,11 +101,35 @@ RIW-16 is a fantasy computer that is programmed in an assembly language with
     - Map-Get `0x5`
       - Data: Sets the internal `frame` register to the frame mapped to the
       specified page.
-    - Lock `0x6`
+    - Lock-IO `0x6`
       - Data: Redirect all I/O operations except `System/Syscall` on the
       specified page to `System/Fault` with the data as `$pc`.
-    - Unlock `0x7`
+    - Unlock-IO `0x7`
       - Data: Stop redirecting I/O operations on the specified page.
+    - Lock-Read `0x8`
+      - Data: Redirect all `load` operations on the specified page to act as
+      `System/Fault` with the data as `$pc`
+    - Unlock-Read `0x9`
+      - Data: Stop redirecting `load` operations on the specified page.
+    - Lock-Write `0xA`
+      - Data: Redirect all `store` operations on the specified page to act as
+      `System/Fault` with the data as `$pc`
+    - Unlock-Write `0xB`
+      - Data: Stop redirecting `store` operations on the specified page.
+    - Lock-Execute `0xC`
+      - Data: Redirect all operations from the specified page to act as
+      `System/Fault` with the data as `$pc`.
+    - Unlock-Execute `0xD`
+      - Data: Stop redirecting all operations on the specified page.
+    - Promote `0xE`
+      - Data: Prevent all locks from affecting the specified page if `$pc` is
+      in the specified page. Any attempts to preform any operations to the
+      specified page or to set `$pc` to an address in the specified page from
+      a non-promoted page (except through `System/Syscall`) results in that
+      operation acting as `System/Fault` with the data as `$pc`.
+    - Demote `0xF`
+      - Data: Allow locks to affect the specified page and allow non-promoted
+      pages to access it if a lock does not prevent it.
 
 ## Assembly Language
 
