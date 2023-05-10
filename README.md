@@ -13,11 +13,13 @@ RIW-16 is a fantasy computer that is programmed in an assembly language with
 - Fixed instruction width
 - Mixed Program/Data
 - 16 Registers
-- 2^16 words of memory
+- 2^24 words of memory
   - Program is loaded in at address 0
     - Program Counter starts at 0
+  - Only 2^16 words are addressable at a single time
+- Paged memory
 - 2^32 words of addressable storage
-  - Custom storage data format to allow for sparse data
+  - The emulator will use a custom storage data format to allow for sparse data
 - Text based I/O
 - Words are big-endian
 
@@ -27,50 +29,94 @@ RIW-16 is a fantasy computer that is programmed in an assembly language with
 - System
   - ID: `0x0`
   - Operations:
-    - Halt `0x0`
+    - Syscall `0x0`
+      - Data: Writes to the internal `syscall-hold` register, then loads the
+      `syscall-handler` register into `$pc`
+    - Syscall-Hold-Get `0x1`
+      - Data: Reads from the internal `syscall-hold` register
+    - Syscall-Handler-Set `0x2`
+      - Data: Writes to the internal `syscall-handler` register
+    - Syscall-Handler-Get `0x3`
+      - Data: Reads from the internal `syscall-handler` register
+    - Fault `0x4`
+      - Data: Writes to the internal `fault-hold` register, then loads the
+      `fault-handler` register into `$pc`
+    - Fault-Hold-Get `0x5`
+      - Data: Reads from the internal `fault-hold` register
+    - Fault-Handler-Set `0x6`
+      - Data: Writes to the internal `fault-handler` register
+    - Fault-Handler-Get `0x7`
+      - Data: Reads from the internal `fault-handler` register
+    - Halt `0x8`
+      - Data: Ignored, Halts the system
 - Console
   - ID: `0x1`
   - Operations:
     - Char-out `0x0`
       - Data: The lower octet is sent to stdout of the host.
     - Char-in `0x1`
-      - Data: If there is a byte from stdin on the host available then the
-      upper octet is set to 0 and lower octet is set to the next byte of stdin
+      - Data: If there is a byte from stdin on the host available, then the
+      upper octet is set to 0 and lower octet is set to the next byte of stdin,
       otherwise the whole word is set to `0xffff`.
 - Storage
   - ID: `0x2`
   - Operations:
-    - MSW-Out `0x0`
-      - Data: Writes the most significant word of the storage device's internal
-      address.
-    - LSW-Out `0x1`
-      - Data: Writes the least significant word of the storage device's internal
-      address.
-    - MSW-In `0x2`
+    - MSW-Address-Set `0x0`
+      - Data: Writes to the most significant word of the storage device's
+      internal address.
+    - LSW-Address-Set `0x1`
+      - Data: Writes to the least significant word of the storage device's
+      internal address.
+    - MSW-Address-Get `0x2`
       - Data: Reads the most significant word of the storage device's internal
       address.
-    - LSW-In `0x3`
+    - LSW-Address-Get `0x3`
       - Data: Reads the least significant word of the storage device's internal
       address.
     - Storage-Out `0x4`
       - Data: Writes to the word at the storage device's current internal
       address.
     - Storage-In `0x5`
-      - Data: Reads the word at the storage device's current internal
-      address.
-
+      - Data: Reads the word at the storage device's current internal address.
+- MMU
+  - ID: `0x3`
+  - Operations:
+    - MSW-Frame-Set `0x0`
+      - Data: Writes the lower octet to the most significant word of the MMU's
+      internal `frame` register.
+    - LSW-Frame-Set `0x1`
+      - Data: Writes to the least significant word of the MMU's internal `frame`
+      register.
+    - MSW-Frame-Get `0x2`
+      - Data: Reads the lower octet of most significant word of the MMU's
+      internal `frame` register. The upper octet is set to 0.
+    - LSW-Frame-Get `0x3`
+      - Data: Reads the least significant word of the MMU's internal `frame`
+      register.
+    - Map-Set `0x4`
+      - Data: Sets the page specified by the data to be mapped to the frame
+      specified by the internal `frame` register.
+    - Map-Get `0x5`
+      - Data: Sets the internal `frame` register to the frame mapped to the
+      specified page.
+    - Lock `0x6`
+      - Data: Redirect all I/O operations except `System/Syscall` on the
+      specified page to `System/Fault` with the data as `$pc`.
+    - Unlock `0x7`
+      - Data: Stop redirecting I/O operations on the specified page.
 
 ## Assembly Language
 
 ### Notes
 - $ specifies a register
 - The lack of a prefix specifies a immediate
-- Immediates may be prefixed with either `0b` `0o` or `0x` to specifiy what
-  base the number is in
+- Immediates may be prefixed with either `0b` `0o` or `0x` to specify what base
+ the number is in
   - `0b` is binary,`0o` is octal, `0x` is hexadecimal
   - If a number is not prefixed then it is assumed to be decimal
+- An 8-bit immediate may be represented by an ASCII character surrounded by
+single quotes
 - Line comments are started with `;`
-
 
 ### Instructions
 
@@ -82,7 +128,7 @@ RIW-16 is a fantasy computer that is programmed in an assembly language with
   - `0001 AAAA BBBB BBBB`
   - Loads the immediate value `B` into the upper octet of`$A`, other bits in
   `$A` are not affected
-- `adn $A, $B, C`
+- `addi $A, $B, C`
   - `0010 AAAA BBBB CCCC`
   - Adds `C` to `$B` and store the result in `$A`. `C` is treated as a 4-bit
   signed integer
@@ -111,7 +157,7 @@ RIW-16 is a fantasy computer that is programmed in an assembly language with
   `C`, copy `$A` into `$pc`
 - `shift $A, $B, $C`
   - `1001 AAAA BBBB CCCC`
-  - Bitshifts `$B` by `$C` (negative for left, positive for right) and stores
+  - Bitshifts `$B` by `$C` (negative for right, positive for left) and stores
   the result in `$A`. Newly shifted in bits are 0
 - `and $A, $B, $C`
   - `1010 AAAA BBBB CCCC`
