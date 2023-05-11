@@ -282,6 +282,7 @@ The flags are as follows:
 
 - `@`
   - Treated as an immediate equal to the current address
+    - In the case of `word` the current address is the address at the start
 - `A[B, C]`
   - Treated as an immediate equal to bits `B` through `C` from `A`
   - Precedence: 1
@@ -316,6 +317,8 @@ The flags are as follows:
 
 - `word $A, B`
   - Equivalent to `loct $A, B[0, 7]` followed by `uoct $A, B[8, 15]`
+- `jump $A`
+  - Equivalent to `OR $pc, $A $A`
 - `lit A, ...`
   - Takes one or more 16-bit immediates and stores them starting at the current
   address
