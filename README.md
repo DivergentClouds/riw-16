@@ -155,7 +155,7 @@ error
 the bit width of the result
   - `w` is 16-bit, `o` is 8-bit, `n` is 4-bit, `b` is 1-bit
   - If the operator is not suffixed, it is assumed to be 16-bit
-  - The affected operators are `+`, `+|`, `-` and `-|`
+  - The affected operators are `+`, `+|`, `-`, `-|`, `|`, `&`, `^` and `~`
 - Operators are left associative
 - Line comments are started with `;`
 
@@ -297,6 +297,20 @@ The flags are as follows:
 - `A -| B`
   - Treated as an immediate equal to `A` minus `B`, saturates
   - Precedence: 0
+- `A | B`
+  - Treated as an immediate equal to `A` or `B`
+  - Precedence: 0
+- `A & B`
+  - Treated as an immediate equal to `A` and `B`
+  - Precedence: 0
+- `A ^ B`
+  - Treated as an immediate equal to `A` xor `B`
+  - Precedence: 0
+- `~ A`
+  - Precedence: 0
+- `( ... )`
+  - Group the contents as having the highest precedence
+  
 
 ### Pseudo-Instructions
 
