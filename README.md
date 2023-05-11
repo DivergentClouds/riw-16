@@ -134,14 +134,29 @@ RIW-16 is a fantasy computer that is programmed in an assembly language with
 ## Assembly Language
 
 ### Notes
+
 - $ specifies a register
-- The lack of a prefix specifies a immediate
-- Immediates may be prefixed with either `0b` `0o` or `0x` to specify what base
- the number is in
-  - `0b` is binary,`0o` is octal, `0x` is hexadecimal
+- The lack of a `$` prefix specifies a immediate
+- Immediates may be prefixed with either `0b`, `0o`, `0d` or `0x` to specify
+what base the number is in
+  - `0b` is binary,`0o` is octal, `0d` is decimal and `0x` is hexadecimal
   - If a number is not prefixed then it is assumed to be decimal
-- An 8-bit immediate may be represented by an ASCII character surrounded by
-single quotes
+- Underscores in immediates are ignored
+- A series of octet immediates may be represented by a series of characters
+surrounded by single or double quotes
+- Identifiers are strings of the form `[a-zA-Z_][a-zA-Z0-9_]*`
+- Identifiers may be used in place of an immediate
+- An identifier may not be defined if it has been previously defined
+- Forward references to identifiers are valid
+- If an immediate is too large for an instruction, the assembler must emit an
+error
+  - If the bit width of an immediate is specified
+- Some operators may optionally be suffixed with `w`, `o`, `n` or `b` to specify
+the bit width of the result
+  - `w` is 16-bit, `o` is 8-bit, `n` is 4-bit, `b` is 1-bit
+  - If the operator is not suffixed, it is assumed to be 16-bit
+  - The affected operators are `+`, `+|`, `-` and `-|`
+- Operators are left associative
 - Line comments are started with `;`
 
 ### Instructions
@@ -237,3 +252,62 @@ The flags are as follows:
 - Zero
   - ???x
   - Set if the result of the comparison was 0; cleared otherwise
+
+### Labels and Constants
+
+- `A:`
+  - Create a global label equal to the current address
+  - `A` is an identifier
+- `.A:`
+  - Create a local label equal to the current address
+  - Forward references to `A` are only allowed starting from the previous global
+  label
+    - If no global label precedes `A`, forward references are allowed starting
+    from the beginning of the file
+  - The identifier `A` is only considered defined until the next global label
+  - `A` is an identifier
+- `A = B`
+  - Create a global constant `A` equal to an immediate `B`
+  - `A` is an identifier
+- `.A = B`
+  - Create a local constant `A` equal to an immediate `B`
+  - Forward references to `A` are only allowed starting from the previous global
+  label
+    - If no global label precedes `A`, forward references are allowed starting
+    from the beginning of the file
+  - The identifier `A` is only considered defined until the next global label
+  - `A` is an identifier
+
+### Operators
+
+- `@`
+  - Treated as an immediate equal to the current address
+- `A[B, C]`
+  - Treated as an immediate equal to bits `B` through `C` from `A`
+  - Precedence: 1
+- `A + B`
+  - Treated as an immediate equal to `A` plus `B`, wraps
+  - Precedence: 0
+- `A +| B`
+  - Treated as an immediate equal to `A` plus `B`, staturates
+  - Precedence: 0
+- `A - B`
+  - Treated as an immediate equal to `A` minus `B`, wraps
+  - Precedence: 0
+- `A -| B`
+  - Treated as an immediate equal to `A` minus `B`, saturates
+  - Precedence: 0
+
+### Pseudo-Instructions
+
+- `word $A, B`
+  - Equivalent to `loct $A, B[0, 7]` followed by `uoct $A, B[8, 15]`
+- `lit A, ...`
+  - Takes one or more 16-bit immediates and stores them starting at the current
+  address
+- `lito A, ...`
+  - Takes one or more 8-bit immediates and stores them starting at the current
+  address
+    - Up to two immediates are placed in each word, with the first immediate
+    going in the upper octet
+  
