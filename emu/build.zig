@@ -1,10 +1,11 @@
 const std = @import("std");
+const builtin = @import("builtin");
 
 // Although this function looks imperative, note that its job is to
 // declaratively construct a build graph that will be executed by an external
 // runner.
 
-pub fn build(b: *std.Build) void {
+pub fn build(b: *std.Build) !void {
     // Standard target options allows the person running `zig build` to choose
     // what target to build for. Here we do not override the defaults, which
     // means any target is allowed, and the default is native. Other options
@@ -24,6 +25,21 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
+
+    const exe_options = b.addOptions();
+    exe.addOptions("build_options", exe_options);
+
+    const link_libc = b.option(bool, "libc", "Link LibC to allow use of c_allocator") orelse false;
+    exe_options.addOption(bool, "libc", link_libc);
+
+    if (link_libc) {
+        if (optimize == .Debug) {
+            std.log.err("Use a release mode if you want to use c_allocator\n", .{});
+            return error.UnwantedLibC;
+        } else if (target.isWindows())
+            std.log.warn("c_allocator is not recommended with this program on windows\n", .{});
+        exe.linkLibC();
+    }
 
     // This declares intent for the executable to be installed into the
     // standard location when the user invokes the "install" step (the default

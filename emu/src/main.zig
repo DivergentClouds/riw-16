@@ -21,10 +21,10 @@ pub fn main() !void {
     const allocator_kind: PossibleAllocators =
         comptime if (builtin.mode == .Debug)
         .debug_general_purpose
-    else if (builtin.os.tag == .windows)
-        .heap
     else if (builtin.link_libc)
         .c
+    else if (builtin.os.tag == .windows)
+        .heap
     else
         .general_purpose;
 
@@ -72,7 +72,8 @@ pub fn main() !void {
     }
 
     var memory_u8 = try allocator.alloc(u8, memory_size * 2); // in bytes
-    defer allocator.free(memory_u8); // TODO: free after converting to `memory`
+    // TODO: free after converting to `memory` instead
+    defer allocator.free(memory_u8);
 
     _ = try std.fs.cwd().readFile(
         args[1],
@@ -113,7 +114,7 @@ pub fn main() !void {
     };
     defer storage.close();
 
-    try emulate(memory, &storage);
+    try emulate(memory, &storage, allocator);
 }
 
 const Flags = enum(u4) {
@@ -158,7 +159,43 @@ const Opcodes = enum(u4) {
     io,
 };
 
-fn emulate(memory: []u16, storage: *std.fs.File) !void {
+const locks = struct {
+    io: bool = false,
+    read: bool = false,
+    write: bool = false,
+    execute: bool = false,
+    promoted: bool = false,
+};
+
+fn getWord(frames: []u16, page_map: []u16, address: u16) u16 {
+    const current_page = @truncate(u8, address >> 8);
+    const current_frame = page_map[current_page];
+
+    return frames[current_frame][@truncate(u8, address)];
+}
+fn setWord(frames: []u16, page_map: []u16, address: u16, value: u16) void {
+    const current_page = @truncate(u8, address >> 8);
+    const current_frame = page_map[current_page];
+
+    frames[current_frame][@truncate(u8, address)] = value;
+}
+
+fn emulate(initial_memory: []u16, storage: *std.fs.File, allocator: std.mem.Allocator) !void {
+    var frames = allocator.alloc([256]u16, 65536);
+
+    for (0..256) |i| {
+        try frames.put(
+            @truncate(u16, i),
+            @ptrCast(*[256][256]u16, initial_memory)[i],
+        );
+    }
+
+    var page_map: [256]u16 = [_]u16{0} ** 256;
+
+    for (0..256) |i| {
+        page_map[i] = @intCast(u16, i);
+    }
+
     var registers: [16]u16 = undefined;
     const pc: u4 = 15; // enables doing registers[pc]
 
@@ -166,16 +203,22 @@ fn emulate(memory: []u16, storage: *std.fs.File) !void {
 
     var running = true;
     while (running) {
-        const opcode: u4 = @truncate(u4, memory[registers[pc]] >> 12);
+        const current_word = getWord(
+            &frames,
+            &page_map,
+            registers[pc],
+        );
 
-        const a: u4 = @truncate(u4, memory[registers[pc]] >> 8);
+        const opcode: u4 = @truncate(u4, current_word >> 12);
+
+        const a: u4 = @truncate(u4, current_word >> 8);
 
         // used in most instructions
-        const b: u4 = @truncate(u4, memory[registers[pc]] >> 4);
-        const c: u4 = @truncate(u4, memory[registers[pc]]);
+        const b: u4 = @truncate(u4, current_word >> 4);
+        const c: u4 = @truncate(u4, current_word);
 
         // used instead of b and c in `loct` and `uoct`
-        const b_oct: u8 = @truncate(u8, memory[registers[pc]]);
+        const b_oct: u8 = @truncate(u8, current_word);
 
         switch (@intToEnum(Opcodes, opcode)) {
             Opcodes.loct => {
@@ -202,7 +245,10 @@ fn emulate(memory: []u16, storage: *std.fs.File) !void {
                 );
             },
             Opcodes.load => {
-                registers[a] = memory[
+                registers[a] =
+                    getWord(
+                    &frames,
+                    &page_map,
                     @bitCast(
                         u16,
                         @bitCast(
@@ -212,11 +258,13 @@ fn emulate(memory: []u16, storage: *std.fs.File) !void {
                             i16,
                             registers[c],
                         ),
-                    )
-                ];
+                    ),
+                );
             },
             Opcodes.store => {
-                memory[
+                setWord(
+                    &frames,
+                    &page_map,
                     @bitCast(
                         u16,
                         @bitCast(
@@ -226,8 +274,9 @@ fn emulate(memory: []u16, storage: *std.fs.File) !void {
                             i16,
                             registers[c],
                         ),
-                    )
-                ] = registers[c];
+                    ),
+                    registers[c],
+                );
             },
             Opcodes.add => {
                 registers[a] = registers[b] +% registers[c];
