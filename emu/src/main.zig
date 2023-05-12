@@ -21,10 +21,10 @@ pub fn main() !void {
     const allocator_kind: PossibleAllocators =
         comptime if (builtin.mode == .Debug)
         .debug_general_purpose
-    else if (builtin.link_libc)
-        .c
     else if (builtin.os.tag == .windows)
         .heap
+    else if (builtin.link_libc)
+        .c
     else
         .general_purpose;
 
@@ -167,27 +167,148 @@ const locks = struct {
     promoted: bool = false,
 };
 
-fn getWord(frames: []u16, page_map: []u16, address: u16) u16 {
-    const current_page = @truncate(u8, address >> 8);
-    const current_frame = page_map[current_page];
+const Devices = struct {
+    const kinds = enum(u16) {
+        system,
+        console,
+        storage,
+        mmu,
+    };
 
-    return frames[current_frame][@truncate(u8, address)];
+    const ports = struct {
+        const system = enum(u16) {
+            syscall,
+            syscall_hold_get,
+            syscall_handler_set,
+            syscall_handler_get,
+            fault,
+            fault_hold_get,
+            fault_handler_set,
+            fault_handler_get,
+            halt,
+        };
+
+        const console = enum(u16) {
+            char_out,
+            char_in,
+        };
+
+        const storage = enum(u16) {
+            msw_address_set,
+            lsw_address_set,
+            msw_address_get,
+            lsw_address_get,
+            storage_out,
+            storage_in,
+        };
+
+        const mmu = enum(u16) {
+            msw_frame_set,
+            lsw_frame_set,
+            msw_frame_get,
+            lsw_frame_get,
+            map_set,
+            map_get,
+            lock_io,
+            unlock_io,
+            lock_read,
+            unlock_read,
+            lock_write,
+            unlock_write,
+            lock_execute,
+            unlock_execute,
+            promote,
+            demote,
+        };
+    };
+
+    const state = struct {
+        const System = struct {
+            syscall_hold: u16 = undefined,
+            syscall_handler: u16 = undefined,
+            fault_handler: u16 = undefined,
+            fault_hold: u16 = undefined,
+            running: bool = true,
+        };
+
+        const Console = struct {
+            // TODO: consider adding cursor state
+        };
+
+        const Storage = struct {
+            msw_address: u16 = undefined,
+            lsw_address: u16 = undefined,
+        };
+
+        const Mmu = struct {
+            msw_frame: u16 = undefined,
+            lsw_frame: u16 = undefined,
+        };
+    };
+
+    system: state.System = state.System{},
+    console: state.Console = state.Console{},
+    storage: state.Storage = state.Storage{},
+    mmu: state.Mmu = state.Mmu{},
+};
+
+const AccessError = error{
+    IllegalWrite,
+    IllegalRead,
+    IllegalExecute,
+    IllegalIO,
+};
+
+fn getWord(
+    frames: [][256]u16,
+    page_map: []u16,
+    lock_map: []locks,
+    is_exec: bool,
+    current_address: u16,
+    dest_address: u16,
+) AccessError!u16 {
+    const current_page = @truncate(u8, current_address >> 8);
+    const dest_page = @truncate(u8, dest_address >> 8);
+
+    if (!lock_map[current_page].promoted) {
+        if (lock_map[current_page].execute)
+            return error.IllegalExecute;
+        if (lock_map[dest_page].read and !is_exec)
+            return error.IllegalRead;
+    }
+
+    const dest_frame = page_map[dest_page];
+
+    return frames[dest_frame][@truncate(u8, dest_address)];
 }
-fn setWord(frames: []u16, page_map: []u16, address: u16, value: u16) void {
-    const current_page = @truncate(u8, address >> 8);
-    const current_frame = page_map[current_page];
 
-    frames[current_frame][@truncate(u8, address)] = value;
+fn setWord(
+    frames: [][256]u16,
+    page_map: []u16,
+    lock_map: []locks,
+    current_address: u16,
+    dest_address: u16,
+    value: u16,
+) AccessError!void {
+    const current_page = @truncate(u8, current_address >> 8);
+    const dest_page = @truncate(u8, dest_address >> 8);
+
+    if (!lock_map[current_page].promoted) {
+        if (lock_map[dest_page].write)
+            return error.IllegalWrite;
+    }
+
+    const dest_frame = page_map[dest_page];
+
+    frames[dest_frame][@truncate(u8, dest_address)] = value;
 }
 
 fn emulate(initial_memory: []u16, storage: *std.fs.File, allocator: std.mem.Allocator) !void {
-    var frames = allocator.alloc([256]u16, 65536);
+    var frames = try allocator.alloc([256]u16, 65536);
 
     for (0..256) |i| {
-        try frames.put(
-            @truncate(u16, i),
-            @ptrCast(*[256][256]u16, initial_memory)[i],
-        );
+        frames[i] =
+            @ptrCast(*[256][256]u16, initial_memory)[i];
     }
 
     var page_map: [256]u16 = [_]u16{0} ** 256;
@@ -196,18 +317,32 @@ fn emulate(initial_memory: []u16, storage: *std.fs.File, allocator: std.mem.Allo
         page_map[i] = @intCast(u16, i);
     }
 
+    const lock_map = try allocator.alloc(locks, 256);
+
     var registers: [16]u16 = undefined;
     const pc: u4 = 15; // enables doing registers[pc]
 
     registers[pc] = 0;
 
-    var running = true;
-    while (running) {
-        const current_word = getWord(
-            &frames,
+    const devices = Devices{};
+
+    while (devices.system.running) {
+        const current_word: u16 = getWord(
+            frames,
             &page_map,
+            lock_map,
+            true,
             registers[pc],
-        );
+            registers[pc],
+        ) catch |err| {
+            switch (err) {
+                error.IllegalExecute => {
+                    registers[pc] = devices.system.fault_handler;
+                    continue;
+                },
+                else => unreachable,
+            }
+        };
 
         const opcode: u4 = @truncate(u4, current_word >> 12);
 
@@ -247,8 +382,11 @@ fn emulate(initial_memory: []u16, storage: *std.fs.File, allocator: std.mem.Allo
             Opcodes.load => {
                 registers[a] =
                     getWord(
-                    &frames,
+                    frames,
                     &page_map,
+                    lock_map,
+                    false,
+                    registers[pc],
                     @bitCast(
                         u16,
                         @bitCast(
@@ -259,12 +397,17 @@ fn emulate(initial_memory: []u16, storage: *std.fs.File, allocator: std.mem.Allo
                             registers[c],
                         ),
                     ),
-                );
+                ) catch {
+                    registers[pc] = devices.system.fault_handler;
+                    continue;
+                };
             },
             Opcodes.store => {
                 setWord(
-                    &frames,
+                    frames,
                     &page_map,
+                    lock_map,
+                    registers[pc],
                     @bitCast(
                         u16,
                         @bitCast(
@@ -276,7 +419,10 @@ fn emulate(initial_memory: []u16, storage: *std.fs.File, allocator: std.mem.Allo
                         ),
                     ),
                     registers[c],
-                );
+                ) catch {
+                    registers[pc] = devices.system.fault_handler;
+                    continue;
+                };
             },
             Opcodes.add => {
                 registers[a] = registers[b] +% registers[c];
