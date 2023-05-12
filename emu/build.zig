@@ -36,8 +36,10 @@ pub fn build(b: *std.Build) !void {
         if (optimize == .Debug) {
             std.log.err("Use a release mode if you want to use c_allocator\n", .{});
             return error.UnwantedLibC;
-        } else if (target.isWindows())
-            std.log.warn("c_allocator is not recommended with this program on windows\n", .{});
+        } else if (target.isWindows()) {
+            std.log.err("c_allocator is not used on windows\n", .{});
+            return error.UnwantedLibC;
+        }
         exe.linkLibC();
     }
 
