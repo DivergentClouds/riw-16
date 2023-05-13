@@ -15,6 +15,8 @@ const AllocatorType = union(PossibleAllocators) {
     general_purpose: std.heap.GeneralPurposeAllocator(.{}),
 };
 
+const pc: u4 = 15; // enables doing registers[pc]
+
 pub fn main() !void {
     const stderr = std.io.getStdErr();
 
@@ -257,6 +259,7 @@ const AccessError = error{
     IllegalRead,
     IllegalExecute,
     IllegalIO,
+    IllegalJump,
 };
 
 fn getWord(
@@ -303,6 +306,26 @@ fn setWord(
     frames[dest_frame][@truncate(u8, dest_address)] = value;
 }
 
+fn setRegister(
+    registers: [16]u16,
+    id: u4,
+    lock_map: []locks,
+    current_address: u16,
+    value: u16,
+) AccessError!void {
+    if (id == pc) {
+        const current_page = @truncate(u8, current_address >> 8);
+        const dest_page = @truncate(u8, value >> 8);
+
+        if (!lock_map[current_page].promoted and
+            lock_map[dest_page].promoted)
+        { // attempt to jump to a promoted page from a non-promoted page
+            return error.IllegalJump;
+        }
+    }
+    registers[id] = value;
+}
+
 fn emulate(initial_memory: []u16, storage: *std.fs.File, allocator: std.mem.Allocator) !void {
     var frames = try allocator.alloc([256]u16, 65536);
 
@@ -320,7 +343,6 @@ fn emulate(initial_memory: []u16, storage: *std.fs.File, allocator: std.mem.Allo
     const lock_map = try allocator.alloc(locks, 256);
 
     var registers: [16]u16 = undefined;
-    const pc: u4 = 15; // enables doing registers[pc]
 
     registers[pc] = 0;
 
@@ -357,15 +379,46 @@ fn emulate(initial_memory: []u16, storage: *std.fs.File, allocator: std.mem.Allo
 
         switch (@intToEnum(Opcodes, opcode)) {
             Opcodes.loct => {
-                registers[a] &= 0xff00;
-                registers[a] |= b_oct;
+                const hold = (registers[a] & 0xff00) | b_oct;
+
+                // check if doing disallowed jump, otherwise registers[a] = hold
+                setRegister(
+                    registers,
+                    a,
+                    lock_map,
+                    registers[pc],
+                    hold,
+                ) catch |err| {
+                    switch (err) {
+                        error.IllegalJump => {
+                            registers[pc] = devices.system.fault_handler;
+                            continue;
+                        },
+                        else => unreachable,
+                    }
+                };
             },
             Opcodes.uoct => {
-                registers[a] &= 0x00ff;
-                registers[a] |= @as(u16, b_oct) << 8;
+                const hold = (registers[a] & 0x00ff) | @as(u16, b_oct) << 8;
+
+                setRegister(
+                    registers,
+                    a,
+                    lock_map,
+                    registers[pc],
+                    hold,
+                ) catch |err| {
+                    switch (err) {
+                        error.IllegalJump => {
+                            registers[pc] = devices.system.fault_handler;
+                            continue;
+                        },
+                        else => unreachable,
+                    }
+                };
             },
             Opcodes.addi => {
-                registers[a] = @bitCast(
+                const hold = @bitCast(
                     u16,
                     @bitCast(
                         i16,
@@ -378,9 +431,25 @@ fn emulate(initial_memory: []u16, storage: *std.fs.File, allocator: std.mem.Allo
                         ),
                     ),
                 );
+
+                setRegister(
+                    registers,
+                    a,
+                    lock_map,
+                    registers[pc],
+                    hold,
+                ) catch |err| {
+                    switch (err) {
+                        error.IllegalJump => {
+                            registers[pc] = devices.system.fault_handler;
+                            continue;
+                        },
+                        else => unreachable,
+                    }
+                };
             },
             Opcodes.load => {
-                registers[a] =
+                const hold =
                     getWord(
                     frames,
                     &page_map,
@@ -400,6 +469,22 @@ fn emulate(initial_memory: []u16, storage: *std.fs.File, allocator: std.mem.Allo
                 ) catch {
                     registers[pc] = devices.system.fault_handler;
                     continue;
+                };
+
+                setRegister(
+                    registers,
+                    a,
+                    lock_map,
+                    registers[pc],
+                    hold,
+                ) catch |err| {
+                    switch (err) {
+                        error.IllegalJump => {
+                            registers[pc] = devices.system.fault_handler;
+                            continue;
+                        },
+                        else => unreachable,
+                    }
                 };
             },
             Opcodes.store => {
@@ -425,77 +510,234 @@ fn emulate(initial_memory: []u16, storage: *std.fs.File, allocator: std.mem.Allo
                 };
             },
             Opcodes.add => {
-                registers[a] = registers[b] +% registers[c];
+                const hold = registers[b] +% registers[c];
+
+                setRegister(
+                    registers,
+                    a,
+                    lock_map,
+                    registers[pc],
+                    hold,
+                ) catch |err| {
+                    switch (err) {
+                        error.IllegalJump => {
+                            registers[pc] = devices.system.fault_handler;
+                            continue;
+                        },
+                        else => unreachable,
+                    }
+                };
             },
             Opcodes.sub => {
-                registers[a] = registers[b] -% registers[c];
+                const hold = registers[b] -% registers[c];
+
+                setRegister(
+                    registers,
+                    a,
+                    lock_map,
+                    registers[pc],
+                    hold,
+                ) catch |err| {
+                    switch (err) {
+                        error.IllegalJump => {
+                            registers[pc] = devices.system.fault_handler;
+                            continue;
+                        },
+                        else => unreachable,
+                    }
+                };
             },
             Opcodes.cmp => {
                 const compared = registers[b] -% registers[c];
 
-                registers[a] &= 0b11111111_11110000;
+                var hold = registers[a] & 0b11111111_11110000;
 
                 if (compared < 256)
-                    registers[a] |= @enumToInt(Flags.half);
+                    hold |= @enumToInt(Flags.half);
 
                 // TODO: is there a better way to do this?
                 if (registers[b] & (1 << 15) == registers[c] & (1 << 15) // ew
                 and registers[b] & (1 << 15) != compared & (1 << 15))
-                    registers[a] |= @enumToInt(Flags.overflow);
+                    hold |= @enumToInt(Flags.overflow);
 
                 if (compared & (1 << 15) == 1 << 15)
-                    registers[a] |= @enumToInt(Flags.negative);
+                    hold |= @enumToInt(Flags.negative);
 
                 if (compared == 0)
-                    registers[a] |= @enumToInt(Flags.zero);
+                    hold |= @enumToInt(Flags.zero);
+
+                setRegister(
+                    registers,
+                    a,
+                    lock_map,
+                    registers[pc],
+                    hold,
+                ) catch |err| {
+                    switch (err) {
+                        error.IllegalJump => {
+                            registers[pc] = devices.system.fault_handler;
+                            continue;
+                        },
+                        else => unreachable,
+                    }
+                };
             },
             Opcodes.branch => {
                 if (@truncate(u4, registers[b]) & c == c)
-                    registers[pc] = registers[a];
+                    setRegister(
+                        registers,
+                        pc,
+                        lock_map,
+                        registers[pc],
+                        registers[a],
+                    ) catch |err| {
+                        switch (err) {
+                            error.IllegalJump => {
+                                registers[pc] = devices.system.fault_handler;
+                                continue;
+                            },
+                            else => unreachable,
+                        }
+                    };
             },
             Opcodes.shift => {
                 var amount = @bitCast(i16, registers[c]);
+                var hold: u16 = undefined;
 
                 if (amount < 0) {
                     amount = 0 - amount;
                     if (amount > 15) {
-                        registers[a] = 0;
+                        hold = 0;
                     } else {
-                        registers[a] = registers[b] >> @truncate(
+                        hold = registers[b] >> @truncate(
                             u4,
                             @bitCast(u16, amount),
                         );
                     }
                 } else {
                     if (amount > 15) {
-                        registers[a] = 0;
+                        hold = 0;
                     } else {
-                        registers[a] = registers[b] << @truncate(
+                        hold = registers[b] << @truncate(
                             u4,
                             @bitCast(u16, amount),
                         );
                     }
                 }
+
+                setRegister(
+                    registers,
+                    a,
+                    lock_map,
+                    registers[pc],
+                    hold,
+                ) catch |err| {
+                    switch (err) {
+                        error.IllegalJump => {
+                            registers[pc] = devices.system.fault_handler;
+                            continue;
+                        },
+                        else => unreachable,
+                    }
+                };
             },
             Opcodes.@"and" => {
-                registers[a] = registers[b] & registers[c];
+                const hold = registers[b] & registers[c];
+
+                setRegister(
+                    registers,
+                    a,
+                    lock_map,
+                    registers[pc],
+                    hold,
+                ) catch |err| {
+                    switch (err) {
+                        error.IllegalJump => {
+                            registers[pc] = devices.system.fault_handler;
+                            continue;
+                        },
+                        else => unreachable,
+                    }
+                };
             },
             Opcodes.@"or" => {
-                registers[a] = registers[b] | registers[c];
+                const hold = registers[b] | registers[c];
+
+                setRegister(
+                    registers,
+                    a,
+                    lock_map,
+                    registers[pc],
+                    hold,
+                ) catch |err| {
+                    switch (err) {
+                        error.IllegalJump => {
+                            registers[pc] = devices.system.fault_handler;
+                            continue;
+                        },
+                        else => unreachable,
+                    }
+                };
             },
             Opcodes.xor => {
-                registers[a] = registers[b] ^ registers[c];
+                const hold = registers[b] ^ registers[c];
+
+                setRegister(
+                    registers,
+                    a,
+                    lock_map,
+                    registers[pc],
+                    hold,
+                ) catch |err| {
+                    switch (err) {
+                        error.IllegalJump => {
+                            registers[pc] = devices.system.fault_handler;
+                            continue;
+                        },
+                        else => unreachable,
+                    }
+                };
             },
             Opcodes.nor => {
-                registers[a] = ~(registers[b] | registers[c]);
+                const hold = ~(registers[b] | registers[c]);
+
+                setRegister(
+                    registers,
+                    a,
+                    lock_map,
+                    registers[pc],
+                    hold,
+                ) catch |err| {
+                    switch (err) {
+                        error.IllegalJump => {
+                            registers[pc] = devices.system.fault_handler;
+                            continue;
+                        },
+                        else => unreachable,
+                    }
+                };
             },
             Opcodes.swap => {
-                var result: u16 = 0;
+                var hold: u16 = 0;
 
-                result |= @as(u16, @truncate(u8, registers[b])) << 8;
-                result |= registers[c] >> 8;
+                hold |= @as(u16, @truncate(u8, registers[b])) << 8;
+                hold |= registers[c] >> 8;
 
-                registers[a] = result;
+                setRegister(
+                    registers,
+                    a,
+                    lock_map,
+                    registers[pc],
+                    hold,
+                ) catch |err| {
+                    switch (err) {
+                        error.IllegalJump => {
+                            registers[pc] = devices.system.fault_handler;
+                            continue;
+                        },
+                        else => unreachable,
+                    }
+                };
             },
             Opcodes.io => {},
         }
