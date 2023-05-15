@@ -27,6 +27,11 @@ RIW-16 is a fantasy computer that is programmed in an assembly language with
 
 ## I/O
 
+### Notes
+
+- Attempting to access a non-existent device or non-existent port redirects to
+`System/Fault` with the data as `$pc`
+
 ### Devices
 - System
   - ID: `0x0`
